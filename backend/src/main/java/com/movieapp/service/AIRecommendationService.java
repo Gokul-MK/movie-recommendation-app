@@ -1,5 +1,6 @@
 package com.movieapp.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.movieapp.dto.MovieDTO;
@@ -21,11 +22,12 @@ public class AIRecommendationService {
     private String geminiBaseUrl;
 
     private final MovieService movieService;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public AIRecommendationService(MovieService movieService) {
+    public AIRecommendationService(MovieService movieService, RestTemplate restTemplate) {
         this.movieService = movieService;
+        this.restTemplate = restTemplate;
     }
 
     /**
@@ -68,21 +70,23 @@ public class AIRecommendationService {
 
         String raw = callGemini(sb.toString());
         try {
-            // Strip markdown code fences if present
             String cleaned = raw.replaceAll("```json", "").replaceAll("```", "").trim();
             JsonNode arr = objectMapper.readTree(cleaned);
             int pos = 0, neu = 0, neg = 0;
             List<Map<String, String>> items = new ArrayList<>();
             for (JsonNode node : arr) {
                 String sentiment = node.path("sentiment").asText("Neutral");
-                items.add(Map.of("review", node.path("review").asText(), "sentiment", sentiment));
+                items.add(Map.of(
+                        "review", node.path("review").asText(),
+                        "sentiment", sentiment));
                 switch (sentiment.toLowerCase()) {
                     case "positive" -> pos++;
                     case "negative" -> neg++;
                     default -> neu++;
                 }
             }
-            return Map.of("results", items,
+            return Map.of(
+                    "results", items,
                     "summary", Map.of("positive", pos, "neutral", neu, "negative", neg));
         } catch (Exception e) {
             return Map.of("error", "Could not parse sentiment response", "raw", raw);
@@ -108,23 +112,38 @@ public class AIRecommendationService {
         return sb.toString();
     }
 
-    private String callGemini(String prompt) {
+    private String callGemini(String prompt) throws RuntimeException {
         String url = geminiBaseUrl + "?key=" + geminiApiKey;
 
-        Map<String, Object> body = Map.of(
-                "contents", List.of(
-                        Map.of("parts", List.of(Map.of("text", prompt)))));
+        // Build body as a proper serializable structure
+        Map<String, Object> part = Map.of("text", prompt);
+        Map<String, Object> content = Map.of("parts", List.of(part));
+        Map<String, Object> body = Map.of("contents", List.of(content));
+
+        // Serialize body manually to avoid RestTemplate Map serialization quirks
+        String jsonBody;
+        try {
+            jsonBody = objectMapper.writeValueAsString(body);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to serialize Gemini request body", e);
+        }
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         try {
             ResponseEntity<String> response = restTemplate.postForEntity(
-                    url, new HttpEntity<>(body, headers), String.class);
+                    url, new HttpEntity<>(jsonBody, headers), String.class);
             JsonNode root = objectMapper.readTree(response.getBody());
-            return root.path("candidates").get(0)
+            JsonNode candidates = root.path("candidates");
+            if (!candidates.isArray() || candidates.isEmpty()) {
+                throw new RuntimeException("Gemini returned no candidates");
+            }
+            return candidates.get(0)
                     .path("content").path("parts").get(0)
                     .path("text").asText();
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("Gemini API error: " + e.getMessage(), e);
         }
@@ -132,7 +151,7 @@ public class AIRecommendationService {
 
     private List<String> parseTitles(String raw) {
         try {
-            String cleaned = raw.replaceAll("```json", "").replaceAll("```", "").trim();
+            String cleaned = raw.replaceAll("(?s)```json", "").replaceAll("```", "").trim();
             JsonNode arr = objectMapper.readTree(cleaned);
             List<String> titles = new ArrayList<>();
             for (JsonNode node : arr) {

@@ -21,14 +21,19 @@ public class MovieService {
     @Value("${tmdb.base.url}")
     private String tmdbBaseUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    // Injected RestTemplate bean from AppConfig
+    public MovieService(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
 
     // ── Helper: build authenticated headers ───────────────────
     private HttpHeaders authHeaders() {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(tmdbApiKey);
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
         return headers;
     }
 
@@ -56,12 +61,13 @@ public class MovieService {
                 .fromHttpUrl(tmdbBaseUrl + "/search/movie")
                 .queryParam("query", query)
                 .queryParam("include_adult", false)
+                .build()
                 .toUriString();
         return fetchResultsList(url);
     }
 
     public MovieDTO getDetails(int movieId) {
-        String url = tmdbBaseUrl + "/movie/" + movieId + "?append_to_response=credits";
+        String url = tmdbBaseUrl + "/movie/" + movieId;
         try {
             ResponseEntity<String> response = restTemplate.exchange(
                     url, HttpMethod.GET, new HttpEntity<>(authHeaders()), String.class);

@@ -2,6 +2,8 @@ package com.movieapp.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
@@ -9,7 +11,19 @@ import org.springframework.web.filter.CorsFilter;
 import java.util.List;
 
 @Configuration
-public class CorsConfig {
+public class AppConfig {
+
+    /**
+     * Shared RestTemplate bean — registered once, reused by all services.
+     * Includes Jackson message converter so Map/List bodies serialize
+     * correctly to JSON automatically.
+     */
+    @Bean
+    public RestTemplate restTemplate() {
+        RestTemplate rt = new RestTemplate();
+        rt.getMessageConverters().add(0, new MappingJackson2HttpMessageConverter());
+        return rt;
+    }
 
     @Bean
     public CorsFilter corsFilter() {

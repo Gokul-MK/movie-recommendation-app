@@ -28,7 +28,12 @@ public class WatchlistController {
 
     // POST /api/watchlist
     @PostMapping
-    public ResponseEntity<Watchlist> add(@RequestBody Map<String, Object> body) {
+    public ResponseEntity<?> add(@RequestBody Map<String, Object> body) {
+        // Guard against missing required fields
+        if (body.get("movieId") == null || body.get("title") == null) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "movieId and title are required"));
+        }
         Watchlist item = new Watchlist();
         item.setMovieId(((Number) body.get("movieId")).intValue());
         item.setTitle((String) body.get("title"));
