@@ -1,0 +1,308 @@
+{
+    "info": {
+        "name": "Movie Recommendation API",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:8080/api"
+        }
+    ],
+    "item": [
+        {
+            "name": "Health",
+            "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/health"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Status UP', () => { const b = pm.response.json(); pm.expect(b.status).to.eql('UP'); });"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Search Movies",
+            "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/movies/search?query=Inception"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                            "pm.test('Has results', () => pm.expect(pm.response.json().length).to.be.above(0));",
+                            "pm.test('First result has id/title', () => { const m = pm.response.json()[0]; pm.expect(m).to.have.keys(['id','title']); });",
+                            "pm.environment.set('movieId', pm.response.json()[0].id);"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Search - Empty Query",
+            "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/movies/search?query="
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Trending Movies",
+            "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/movies/trending"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Non-empty array', () => pm.expect(pm.response.json().length).to.be.above(0));"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Top Rated Movies",
+            "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/movies/top-rated"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Non-empty array', () => pm.expect(pm.response.json().length).to.be.above(0));"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Movie Details",
+            "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/movies/{{movieId}}"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Has id and title', () => { const b = pm.response.json(); pm.expect(b.id).to.exist; pm.expect(b.title).to.exist; });",
+                            "pm.test('Has overview', () => pm.expect(pm.response.json().overview).to.be.a('string'));"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Movie Recommendations",
+            "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/movies/{{movieId}}/recommendations"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "POST Watchlist - Add",
+            "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/watchlist",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\"movieId\":27205,\"title\":\"Inception\",\"posterPath\":\"/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg\",\"rating\":8.4,\"releaseDate\":\"2010-07-16\"}"
+                }
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                            "pm.test('Has id', () => pm.expect(pm.response.json().id).to.exist);",
+                            "pm.environment.set('watchlistId', pm.response.json().id);"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "POST Watchlist - Duplicate (409)",
+            "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/watchlist",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\"movieId\":27205,\"title\":\"Inception\",\"posterPath\":\"/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg\",\"rating\":8.4,\"releaseDate\":\"2010-07-16\"}"
+                }
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 409 Conflict', () => pm.response.to.have.status(409));"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "GET Watchlist",
+            "request": {
+                "method": "GET",
+                "url": "{{baseUrl}}/watchlist"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                            "pm.test('Contains added movie', () => { const found = pm.response.json().some(w => w.movieId === 27205); pm.expect(found).to.be.true; });"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "DELETE Watchlist",
+            "request": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/watchlist/{{watchlistId}}"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 204', () => pm.response.to.have.status(204));"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "DELETE Watchlist - Not Found (404)",
+            "request": {
+                "method": "DELETE",
+                "url": "{{baseUrl}}/watchlist/99999999"
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "AI Recommendations",
+            "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/recommendations",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\"preferences\":\"mind-bending sci-fi thriller with great cinematography\",\"genres\":[\"Sci-Fi\",\"Thriller\"],\"favoriteMovies\":[\"Inception\",\"Interstellar\"],\"minRating\":7.5}"
+                }
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Returns array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Sentiment Analysis",
+            "request": {
+                "method": "POST",
+                "url": "{{baseUrl}}/sentiment",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\"reviews\":[\"This movie was absolutely amazing!\",\"Meh, it was okay.\",\"Terrible, worst film I have seen.\"]}"
+                }
+            },
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "exec": [
+                            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                            "pm.test('Has results and summary', () => { const b = pm.response.json(); pm.expect(b.results).to.be.an('array'); pm.expect(b.summary).to.exist; });"
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+}
