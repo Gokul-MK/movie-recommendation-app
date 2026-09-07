@@ -24,7 +24,6 @@ public class MovieService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // Injected RestTemplate bean from AppConfig
     public MovieService(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
@@ -34,21 +33,44 @@ public class MovieService {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(tmdbApiKey);
         headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+        // User-Agent prevents TMDB from resetting connections on Java HTTP clients
+        headers.set("User-Agent", "CineAI/1.0 (MovieRecommendationApp)");
         return headers;
+    }
+
+    // ── Helper: GET with 1 automatic retry on connection errors ──
+    private String getWithRetry(String url) {
+        int attempts = 0;
+        Exception last = null;
+        while (attempts < 2) {
+            try {
+                ResponseEntity<String> response = restTemplate.exchange(
+                        url, HttpMethod.GET, new HttpEntity<>(authHeaders()), String.class);
+                return response.getBody();
+            } catch (Exception e) {
+                last = e;
+                attempts++;
+                if (attempts < 2) {
+                    try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+                }
+            }
+        }
+        throw new RuntimeException("TMDB API error: " + last.getMessage(), last);
     }
 
     // ── Helper: GET and parse "results" array ─────────────────
     private List<MovieDTO> fetchResultsList(String url) {
         try {
-            ResponseEntity<String> response = restTemplate.exchange(
-                    url, HttpMethod.GET, new HttpEntity<>(authHeaders()), String.class);
-            JsonNode root = objectMapper.readTree(response.getBody());
+            String body = getWithRetry(url);
+            JsonNode root = objectMapper.readTree(body);
             JsonNode results = root.path("results");
             List<MovieDTO> movies = new ArrayList<>();
             for (JsonNode node : results) {
                 movies.add(objectMapper.treeToValue(node, MovieDTO.class));
             }
             return movies;
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("TMDB API error: " + e.getMessage(), e);
         }
@@ -69,9 +91,8 @@ public class MovieService {
     public MovieDTO getDetails(int movieId) {
         String url = tmdbBaseUrl + "/movie/" + movieId;
         try {
-            ResponseEntity<String> response = restTemplate.exchange(
-                    url, HttpMethod.GET, new HttpEntity<>(authHeaders()), String.class);
-            return objectMapper.readValue(response.getBody(), MovieDTO.class);
+            String body = getWithRetry(url);
+            return objectMapper.readValue(body, MovieDTO.class);
         } catch (Exception e) {
             throw new RuntimeException("TMDB API error: " + e.getMessage(), e);
         }

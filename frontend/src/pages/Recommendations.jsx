@@ -5,6 +5,51 @@ import Loading from '../components/Loading'
 import ErrorMessage from '../components/ErrorMessage'
 import { getAIRecommendations } from '../services/backendApi'
 
+// ── IMPORTANT: defined OUTSIDE the parent so React never remounts it on re-render ──
+// Defining components inside a render function causes them to lose focus after each keystroke
+function TagInput({ tags, value, onChange, onAdd, onRemove, placeholder }) {
+    return (
+        <div>
+            <div className="flex gap-2 mb-2">
+                <input
+                    type="text"
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onAdd() } }}
+                    placeholder={placeholder}
+                    className="input-field text-sm py-2"
+                />
+                <button
+                    type="button"
+                    onClick={onAdd}
+                    className="shrink-0 bg-dark-600 hover:bg-dark-500 text-primary-400 px-3 py-2 rounded-xl border border-dark-500"
+                >
+                    <Plus size={16} />
+                </button>
+            </div>
+            {tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                    {tags.map(t => (
+                        <span
+                            key={t}
+                            className="flex items-center gap-1 bg-primary-900/40 border border-primary-500/30 text-primary-300 text-xs px-3 py-1 rounded-full"
+                        >
+                            {t}
+                            <button
+                                type="button"
+                                onClick={() => onRemove(t)}
+                                className="hover:text-red-400 transition-colors"
+                            >
+                                <X size={12} />
+                            </button>
+                        </span>
+                    ))}
+                </div>
+            )}
+        </div>
+    )
+}
+
 export default function Recommendations() {
     const [preferences, setPreferences] = useState('')
     const [genres, setGenres] = useState([])
@@ -20,7 +65,10 @@ export default function Recommendations() {
 
     const addTag = (value, setter, inputSetter) => {
         const v = value.trim()
-        if (v) { setter((prev) => (prev.includes(v) ? prev : [...prev, v])); inputSetter('') }
+        if (v) {
+            setter((prev) => (prev.includes(v) ? prev : [...prev, v]))
+            inputSetter('')
+        }
     }
     const removeTag = (value, setter) => setter((prev) => prev.filter((t) => t !== value))
 
@@ -48,38 +96,6 @@ export default function Recommendations() {
             setLoading(false)
         }
     }
-
-    const TagInput = ({ tags, value, onChange, onAdd, onRemove, placeholder }) => (
-        <div>
-            <div className="flex gap-2 mb-2">
-                <input
-                    type="text"
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onAdd() } }}
-                    placeholder={placeholder}
-                    className="input-field text-sm py-2"
-                />
-                <button type="button" onClick={onAdd}
-                    className="shrink-0 bg-dark-600 hover:bg-dark-500 text-primary-400 px-3 py-2 rounded-xl border border-dark-500">
-                    <Plus size={16} />
-                </button>
-            </div>
-            {tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                    {tags.map(t => (
-                        <span key={t} className="flex items-center gap-1 bg-primary-900/40 border border-primary-500/30
-                                     text-primary-300 text-xs px-3 py-1 rounded-full">
-                            {t}
-                            <button onClick={() => onRemove(t)} className="hover:text-red-400 transition-colors">
-                                <X size={12} />
-                            </button>
-                        </span>
-                    ))}
-                </div>
-            )}
-        </div>
-    )
 
     return (
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -112,7 +128,9 @@ export default function Recommendations() {
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">Preferred Genres</label>
                         <TagInput
-                            tags={genres} value={genreInput} onChange={setGenreInput}
+                            tags={genres}
+                            value={genreInput}
+                            onChange={setGenreInput}
                             onAdd={() => addTag(genreInput, setGenres, setGenreInput)}
                             onRemove={(v) => removeTag(v, setGenres)}
                             placeholder="e.g. Thriller, Comedy…"
@@ -123,7 +141,9 @@ export default function Recommendations() {
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">Favourite Movies</label>
                         <TagInput
-                            tags={favorites} value={favInput} onChange={setFavInput}
+                            tags={favorites}
+                            value={favInput}
+                            onChange={setFavInput}
                             onAdd={() => addTag(favInput, setFavorites, setFavInput)}
                             onRemove={(v) => removeTag(v, setFavorites)}
                             placeholder="e.g. Inception, Parasite…"
@@ -135,7 +155,10 @@ export default function Recommendations() {
                 <div className="sm:w-48">
                     <label className="block text-sm font-medium text-gray-300 mb-2">Minimum Rating</label>
                     <input
-                        type="number" min="1" max="10" step="0.5"
+                        type="number"
+                        min="1"
+                        max="10"
+                        step="0.5"
                         value={minRating}
                         onChange={(e) => setMinRating(e.target.value)}
                         placeholder="e.g. 7.5"
@@ -143,12 +166,20 @@ export default function Recommendations() {
                     />
                 </div>
 
-                <button type="submit" disabled={loading}
-                    className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2">
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2"
+                >
                     {loading ? (
-                        <><span className="animate-spin border-2 border-white/30 border-t-white rounded-full w-4 h-4" /> Getting Recommendations…</>
+                        <>
+                            <span className="animate-spin border-2 border-white/30 border-t-white rounded-full w-4 h-4" />
+                            Getting Recommendations…
+                        </>
                     ) : (
-                        <><Sparkles size={16} /> Get Recommendations</>
+                        <>
+                            <Sparkles size={16} /> Get Recommendations
+                        </>
                     )}
                 </button>
             </form>

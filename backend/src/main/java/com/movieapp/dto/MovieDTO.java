@@ -1,7 +1,7 @@
 package com.movieapp.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -10,25 +10,25 @@ public class MovieDTO {
     private Integer id;
     private String title;
 
-    @JsonProperty("poster_path")
+    @JsonAlias("poster_path")
     private String posterPath;
 
-    @JsonProperty("vote_average")
+    @JsonAlias("vote_average")
     private Double voteAverage;
 
-    @JsonProperty("release_date")
+    @JsonAlias("release_date")
     private String releaseDate;
 
     private String overview;
     private Integer runtime;
     private Double popularity;
 
-    @JsonProperty("genre_ids")
+    @JsonAlias("genre_ids")
     private List<Integer> genreIds;
 
     private List<Genre> genres;
 
-    @JsonProperty("vote_count")
+    @JsonAlias("vote_count")
     private Integer voteCount;
 
     // ── Nested classes ────────────────────────────────────────

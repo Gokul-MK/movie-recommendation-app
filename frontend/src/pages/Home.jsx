@@ -14,30 +14,41 @@ export default function Home() {
     const [errorTrending, setErrorTrending] = useState(null)
     const [errorTopRated, setErrorTopRated] = useState(null)
 
-    const fetchTrending = async () => {
+    const fetchTrending = async (isRetry = false) => {
         setLoadingTrending(true)
         setErrorTrending(null)
         try {
             const res = await getTrendingMovies()
             setTrending(res.data)
         } catch {
-            setErrorTrending('Unable to load trending movies, please try again.')
-        } finally {
-            setLoadingTrending(false)
+            if (!isRetry) {
+                // Auto-retry once after 1s before showing error
+                setTimeout(() => fetchTrending(true), 1000)
+            } else {
+                setErrorTrending('Unable to load trending movies, please try again.')
+                setLoadingTrending(false)
+            }
+            return
         }
+        setLoadingTrending(false)
     }
 
-    const fetchTopRated = async () => {
+    const fetchTopRated = async (isRetry = false) => {
         setLoadingTopRated(true)
         setErrorTopRated(null)
         try {
             const res = await getTopRatedMovies()
             setTopRated(res.data)
         } catch {
-            setErrorTopRated('Unable to load top-rated movies, please try again.')
-        } finally {
-            setLoadingTopRated(false)
+            if (!isRetry) {
+                setTimeout(() => fetchTopRated(true), 1500)
+            } else {
+                setErrorTopRated('Unable to load top-rated movies, please try again.')
+                setLoadingTopRated(false)
+            }
+            return
         }
+        setLoadingTopRated(false)
     }
 
     useEffect(() => {

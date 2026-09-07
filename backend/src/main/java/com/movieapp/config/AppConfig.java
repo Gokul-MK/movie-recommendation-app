@@ -2,7 +2,6 @@ package com.movieapp.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -20,9 +19,7 @@ public class AppConfig {
      */
     @Bean
     public RestTemplate restTemplate() {
-        RestTemplate rt = new RestTemplate();
-        rt.getMessageConverters().add(0, new MappingJackson2HttpMessageConverter());
-        return rt;
+        return new RestTemplate();
     }
 
     @Bean
